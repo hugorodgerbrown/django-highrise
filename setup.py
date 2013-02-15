@@ -2,16 +2,17 @@ import os
 from setuptools import setup
 
 README = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
+LICENCE = open(os.path.join(os.path.dirname(__file__), 'LICENCE.md')).read()
 
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-highrise',
-    version='0.0',
+    version='0.1',
     packages=['django_highrise'],
     include_package_data=True,
-    license='BSD License',
+    license=LICENCE,
     description='Highrise CRM integration for Django projects.',
     long_description=README,
     url='https://github.com/hugorodgerbrown/django-highrise',
