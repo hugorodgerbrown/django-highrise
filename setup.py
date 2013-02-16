@@ -1,24 +1,23 @@
 import os
+from os.path import join, dirname, normpath, abspath
+import django_highrise
 from setuptools import setup
 
-README = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
-LICENCE = open(os.path.join(os.path.dirname(__file__), 'LICENCE.md')).read()
-
 # allow setup.py to be run from any path
-os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+os.chdir(normpath(join(abspath(__file__), os.pardir)))
 
 setup(
-    name='django-highrise',
-    version='0.3',
+    name=django_highrise.__title__,
+    version=django_highrise.__version__,
     packages=['django_highrise'],
     include_package_data=True,
-    install_requires=['pyrise'],
-    license=LICENCE,
-    description='Highrise CRM integration for Django projects.',
-    long_description=README,
+    install_requires=['pyrise >= 0.4'],
+    license=open(join(dirname(__file__), 'LICENCE.md')).read(),
+    description=django_highrise.__description__,
+    long_description=open(join(dirname(__file__), 'README.rst')).read(),
     url='https://github.com/hugorodgerbrown/django-highrise',
-    author='Hugo Rodger-Brown',
-    author_email='hugo@yunojuno.com',
+    author=django_highrise.__author__,
+    author_email='hugo@rodger-brown.com',
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',

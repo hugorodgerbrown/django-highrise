@@ -1,19 +1,27 @@
 """
-django_highrise app.
+Django-Highrise is a simple django app used to assist in synchronising django
+users with Highrise CRM contacts.
 
 Setup:
 
 1. Install the app from PyPI
-2. Add the app to your django settings.py INSTALLED_APPS
+2. Add `django_highrise` to your django INSTALLED_APPS in settings.py
 3. Run syncdb to create the underlying database tables
 
 NB you must call `init(server, api_key)` to initialise the Highrise API
 settings before attempting to sync a user to Highrise.
 """
-import logging
 
-from pyrise import Highrise, ElevatorError, Person, EmailAddress
-from .models import HighriseContact
+__title__ = 'django-highrise'
+__version__ = '0.4'
+__author__ = 'Hugo Rodger-Brown'
+__license__ = 'Simplified BSD License'
+__copyright__ = 'Copyright 2013 Hugo Rodger-Brown'
+__description__ = 'Highrise CRM integration for Django projects.'
+
+import logging
+import pyrise
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +36,8 @@ def init(server, api_key):
         api_key: a valid Highrise API key - keys are locked to users,
             and so you will need to get a key from your account on Highrise.
     """
-    Highrise.set_server(server)
-    Highrise.auth(api_key)
+    pyrise.Highrise.set_server(server)
+    pyrise.Highrise.auth(api_key)
 
 
 def test_me():
@@ -43,9 +51,9 @@ def test_me():
         True if the connection works, else False.
     """
     try:
-        Highrise.request('me.xml')
+        pyrise.Highrise.request('me.xml')
         return True
-    except ElevatorError:
+    except pyrise.ElevatorError:
         return False
 
 
@@ -60,7 +68,11 @@ def sync_user(user):
             the returned Person object reference, and its properties and
             methods (add_note, add_tag etc.)
     """
-    if Highrise._server is None:
+    # imported here to allow setuptools to import django_highrise
+    # outside of a django project.
+    from .models import HighriseContact
+
+    if pyrise.Highrise._server is None:
         raise HighriseSyncException(
             "Highrise connection is not initialised. Please call init() "
             "with the server and api_key arguments.")
@@ -79,7 +91,7 @@ def sync_user(user):
         # returned from Highrise, they there is no implicit solution, so
         # raise an exception and let the client code handle it.
         try:
-            pp = Person.filter(email=user.email)
+            pp = pyrise.Person.filter(email=user.email)
             # logging.debug('Highrise API network call: Person.filter()')
 
             if len(pp) == 0:
@@ -97,7 +109,7 @@ def sync_user(user):
             contact.save()
             return contact
 
-        except ElevatorError:
+        except pyrise.ElevatorError:
             logger.error("Highrise API exception.", exc_info=True)
             raise
 
@@ -117,10 +129,10 @@ def create_new_contact(user):
 
     NB This requires a network API call.
     """
-    p = Person()
+    p = pyrise.Person()
     p.first_name = user.firstname
     p.last_name = user.lastname
-    email = EmailAddress(address=user.email)
+    email = pyrise.EmailAddress(address=user.email)
     p.contact_data.email_addresses.append(email)
     p.save()  # network API call
     return p
