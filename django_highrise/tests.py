@@ -1,11 +1,17 @@
 """
 Django test for django-highrise app.
 """
-from pyrise import Person, EmailAddress, Highrise
+from pyrise import Highrise
 from django.test import TestCase
 from django.conf import settings
 from django.contrib.auth.models import User
-from . import sync_user, init, test_me, HighriseSyncException
+from . import (
+    create_new_contact,
+    sync_user,
+    init,
+    test_me,
+    HighriseSyncException
+)
 
 
 class HighriseIntegrationTestCase(TestCase):
@@ -20,14 +26,14 @@ class HighriseIntegrationTestCase(TestCase):
         init(settings.HIGHRISE_SERVER, settings.HIGHRISE_API_KEY)
         self.test_user = User.objects.create_user('john',
             'lennon@thebeatles.com', 'johnpassword')
-        self.test_user.firstname = 'john'
-        self.test_user.lastname = 'lennon'
+        self.test_user.first_name = 'john'
+        self.test_user.last_name = 'lennon'
 
     def tearDown(self):
         pass
 
     def test_unitialised_connection(self):
-        """Ensure that correct exception occurs if init() is not called."""
+        """Test that correct exception is raised if pyrise is not initialised."""
         Highrise._server = None
         with self.assertRaises(HighriseSyncException) as cm:
             sync_user(self.test_user)
@@ -48,11 +54,11 @@ class HighriseIntegrationTestCase(TestCase):
         contact = sync_user(user)
         self.assertEqual(
             unicode(contact),
-            u"%s = %s" % (user.firstname, contact.highrise_id)
+            u"%s = %s" % (user.first_name, contact.highrise_id)
         )
         self.assertEqual(
             str(contact),
-            "%s = %s" % (user.firstname, contact.highrise_id)
+            "%s = %s" % (user.first_name, contact.highrise_id)
         )
         person = contact.person
         contact.person = None
@@ -69,8 +75,8 @@ class HighriseIntegrationTestCase(TestCase):
         cp = contact.person
         self.assertIsNotNone(cp)
         self.assertEqual(cp.id, contact.highrise_id)
-        self.assertEqual(cp.first_name, user.firstname)
-        self.assertEqual(cp.last_name, user.lastname)
+        self.assertEqual(cp.first_name, user.first_name)
+        self.assertEqual(cp.last_name, user.last_name)
         self.assertEqual(len(cp.contact_data.email_addresses), 1)
         self.assertEqual(cp.contact_data.email_addresses[0].address, user.email)
         self.assertIsNone(contact.company_id)
@@ -78,7 +84,7 @@ class HighriseIntegrationTestCase(TestCase):
         contact.person.delete()
 
     def test_sync_existing_user(self):
-        """ Test syncing a user a second time."""
+        """Test syncing a user a second time."""
         user = self.test_user
         contact1 = sync_user(user)
         contact2 = sync_user(user)
@@ -89,34 +95,12 @@ class HighriseIntegrationTestCase(TestCase):
         self.assertNotEqual(contact1.company_id, contact2.last_synced_at)
         contact1.person.delete()
 
-    def test_duplicate_highrise_contacts(self):
-        """
-        Test that duplicate highrise contacts (same email) will raise an exception.
-        """
+    def test_duplicate_highrise_contacts_raises_exception(self):
+        """Test that duplicate highrise contacts (same email) will raise an exception."""
         user = self.test_user
-        p1 = self._create_highrise_contact_from_user(user)
-        p2 = self._create_highrise_contact_from_user(user)
+        p1 = create_new_contact(user)
+        p2 = create_new_contact(user)
         with self.assertRaises(HighriseSyncException):
             sync_user(user)
         p1.delete()
         p2.delete()
-
-    def _create_highrise_contact_from_user(self, user):
-        """
-        Helper method that creates a Highrise contact in the 'raw' using pyrise.
-
-        This method does not sync the contact, it just creates them directly.
-
-        Args:
-            user: the django user from which to create the person.
-
-        Returns:
-            a reference to the created contact as a pyrise.Person object
-        """
-        p = Person()
-        p.first_name = user.firstname
-        p.last_name = user.lastname
-        email = EmailAddress(address=user.email)
-        p.contact_data.email_addresses.append(email)
-        p.save()  # network API call
-        return p

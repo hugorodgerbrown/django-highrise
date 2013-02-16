@@ -121,5 +121,14 @@ Get the Highrise URL for the contact::
 Tests
 -----
 
-There is a test suite, please bear in mind that it will only run within the
-context of a django app.
+There is a test suite, and a test_settings.py file that is (I think) the
+smallest I could get away with and still run the tests. It includes DATABASES,
+INSTALLED_APPS and LOGGING (because django_highrise logs error using logging).
+The database setting is for sqlite3, so no additional software is required.
+
+The repository includes a modified manage.py and test_settings.py that enable
+the tests to be run in isolation (i.e. you could download the source repo and
+run the tests direct from the command line using ``python manage.py test``).
+These files are *not* included in the package, as it is assumed that the app
+will be used within the context of an existing Django site, in which case the
+site settings would suffice.

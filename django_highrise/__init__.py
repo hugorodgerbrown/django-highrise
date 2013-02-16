@@ -13,7 +13,7 @@ settings before attempting to sync a user to Highrise.
 """
 
 __title__ = 'django-highrise'
-__version__ = '0.4'
+__version__ = '0.6'
 __author__ = 'Hugo Rodger-Brown'
 __license__ = 'Simplified BSD License'
 __copyright__ = 'Copyright 2013 Hugo Rodger-Brown'
@@ -82,6 +82,15 @@ def sync_user(user):
         hc.get_person()  # this forces lazy instantiation to happen now.
         return hc
 
+    except pyrise.NotFound:
+        # hmm. we have a local HighriseContact record with a Highrise ID
+        # that doesn't match anything in Highrise itself. Add some context
+        # and re-raise
+        raise HighriseSyncException(
+            "Not matching Highrise contact found for %s at %s"
+            % (hc.highrise_id, pyrise.Highrise._server)
+        )
+
     except HighriseContact.DoesNotExist:
         # There's no local HighriseContact, so we need to work out whether
         # this user exists at all in Highrise. If they do not, then we go
@@ -130,8 +139,8 @@ def create_new_contact(user):
     NB This requires a network API call.
     """
     p = pyrise.Person()
-    p.first_name = user.firstname
-    p.last_name = user.lastname
+    p.first_name = user.first_name
+    p.last_name = user.last_name
     email = pyrise.EmailAddress(address=user.email)
     p.contact_data.email_addresses.append(email)
     p.save()  # network API call
