@@ -1,2 +1,2 @@
-include README.md
+include README.md, LICENCE.md
 recursive-include django_highrise *.py
