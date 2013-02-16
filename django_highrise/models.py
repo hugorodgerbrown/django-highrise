@@ -2,28 +2,11 @@
 Models for the django_highrise app.
 """
 import logging
-
+from pyrise import Person, Highrise
 from django.db import models
 from django.contrib.auth.models import User
 
-from pyrise import Person
-
 logger = logging.getLogger(__name__)
-
-
-class HighriseSyncException(Exception):
-    """
-    Raised whenever syncing issues occur. Typically this is duplicate contacts,
-    or missing contacts.
-    """
-    def __init__(self, message):
-        self.message = message
-
-    def __unicode__(self):
-        return u'%s' % self.message
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
 
 
 class HighriseContact(models.Model):
@@ -45,17 +28,39 @@ class HighriseContact(models.Model):
         """
         Initialise the object with a local django user.
         """
-        self._person = None
-        super(HighriseContact, self).__init__(*args, **kwargs)
         # this property is never stored, but is populated when a sync is
         # done, which makes it available to calling code. It is ephemeral,
         # but useful. It is a pyrise.Person object.
+        self._person = None
+        super(HighriseContact, self).__init__(*args, **kwargs)
 
     def __unicode__(self):
         return u"%s = %s" % (self.user, self.highrise_id)
 
     def __str__(self):
         return unicode(self).encode('utf-8')
+
+    @property
+    def url(self):
+        """
+        Return the URL to the person on Highrise.
+
+        If the underlying Highrise._server is not set, or the highrise_id
+        property is not set then return empty string.
+        """
+        if Highrise._server and self.highrise_id:
+            return ("%s/people/%s"
+                % (Highrise._server, self.highrise_id))
+        else:
+            return ''
+
+    def save(self):
+        """
+        Saves person property to Highrise as well as saving local model.
+        """
+        if self._person:
+            self._person.save()
+        super(HighriseContact, self).save()
 
     def get_person(self):
         """
@@ -76,16 +81,9 @@ class HighriseContact(models.Model):
         """
         if person is None:
             self._person = None
+            self.highrise_id = None
         else:
             self._person = person
             self.highrise_id = person.id
 
     person = property(get_person, set_person)
-
-    # def sync(self):
-    #     """
-    #     Fetch latest from Highrise, and push updates. NOT IMPLEMENTED.
-    #     """
-    #     self.person = Person.get(self.highrise_id)
-    #     # TODO: update any synced properties
-    #     # logging.debug('Highrise API network call: Person.get()')

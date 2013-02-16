@@ -1,33 +1,19 @@
 """
-Django-Highrise app.
+django_highrise app.
 
 Setup:
 
-Install the app from PyPI:
+1. Install the app from PyPI
+2. Add the app to your django settings.py INSTALLED_APPS
+3. Run syncdb to create the underlying database tables
 
-    $ pip install django-highrise
-
-Add the app to your django settings.py INSTALLED_APPS:
-
-    INSTALLED_APPS = (
-        ...
-        'django_highrise',
-    )
-
-Run syncdb to create the underlying database tables:
-
-    $ python manage.py syncdb
-
-You can now import the django_highrise package and start using the app.
-
-NB you must call 'init(server, key)' to initialise the Highrise API settings
-before using any other methods.
-
+NB you must call `init(server, api_key)` to initialise the Highrise API
+settings before attempting to sync a user to Highrise.
 """
 import logging
 
 from pyrise import Highrise, ElevatorError, Person, EmailAddress
-from .models import HighriseContact, HighriseSyncException
+from .models import HighriseContact
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +60,10 @@ def sync_user(user):
             the returned Person object reference, and its properties and
             methods (add_note, add_tag etc.)
     """
+    if Highrise._server is None:
+        raise HighriseSyncException(
+            "Highrise connection is not initialised. Please call init() "
+            "with the server and api_key arguments.")
     try:
         # HAPPY PATH
         hc = HighriseContact.objects.get(user=user)
@@ -109,6 +99,7 @@ def sync_user(user):
 
         except ElevatorError:
             logger.error("Highrise API exception.", exc_info=True)
+            raise
 
 
 def create_new_contact(user):
@@ -133,3 +124,18 @@ def create_new_contact(user):
     p.contact_data.email_addresses.append(email)
     p.save()  # network API call
     return p
+
+
+class HighriseSyncException(Exception):
+    """
+    Raised whenever syncing issues occur. Typically this is duplicate contacts,
+    or missing contacts.
+    """
+    def __init__(self, message):
+        self.message = message
+
+    def __unicode__(self):
+        return u'%s' % self.message
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
